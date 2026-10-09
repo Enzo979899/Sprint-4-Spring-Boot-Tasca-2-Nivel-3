@@ -7,6 +7,24 @@ services:
       - "127.0.0.1:27017:27017"
     volumes:
       - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build: .
+    image: fruit-order-api:local
+    container_name: fruit-order-api
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/fruit_orders
+    depends_on:
+      mongodb:
+        condition: service_healthy
 
 volumes:
   mongodb_data:
