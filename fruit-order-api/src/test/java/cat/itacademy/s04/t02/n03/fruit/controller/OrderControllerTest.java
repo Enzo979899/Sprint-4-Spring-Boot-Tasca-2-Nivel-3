@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -165,6 +166,41 @@ class OrderControllerTest {
 
         mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldExplainWhichFieldIsInvalid() throws Exception {
+
+        String json = validJson().replace("\"Carlos\"", "\"\"");
+
+        mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message",
+                        containsString("clientName")));
+    }
+
+    @Test
+    void shouldReturnApiErrorWhenJsonIsMalformed() throws Exception {
+
+        String invalidJson = """
+            {
+                "clientName": "Carlos",
+                "deliveryDate":
+            }
+            """;
+
+        mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(invalidJson))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Malformed request body"));
+    }
+
+    @Test
+    void shouldReturnApiErrorWhenHttpMethodIsNotAllowed() throws Exception {
+
+        mockMvc.perform(patch("/orders/order-1")).andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405))
+                .andExpect(jsonPath("$.error").value("Method Not Allowed"))
+                .andExpect(jsonPath("$.message").value("HTTP method not allowed"));
     }
 
     private Order createOrder() {
